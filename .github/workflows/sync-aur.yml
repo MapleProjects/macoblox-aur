@@ -1,0 +1,78 @@
+name: Sincronizar AUR
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar cambios en upstream MacOBlox
+        id: check_upstream
+        run: |
+          git clone --depth=1 https://github.com/aubree-lat/MacOBlox.git upstream
+          UPSTREAM_REV=$(git -C upstream rev-list --count HEAD)
+          UPSTREAM_HASH=$(git -C upstream rev-parse --short HEAD)
+          NEW_PKGVER="r${UPSTREAM_REV}.${UPSTREAM_HASH}"
+          echo "Nueva version calculada: $NEW_PKGVER"
+          echo "new_pkgver=$NEW_PKGVER" >> $GITHUB_OUTPUT
+
+          if [ -f upstream/packaging/aur/PKGBUILD ]; then
+            cp upstream/packaging/aur/PKGBUILD PKGBUILD
+            sed -i 's/^# Maintainer:.*/# Maintainer: MapleProjects <eportillo898v2@gmail.com>\n# Contributor: aubree.wtf <https:\/\/aubree.wtf\/>/' PKGBUILD
+          fi
+          sed -i "s/^pkgver=.*/pkgver=$NEW_PKGVER/" PKGBUILD
+
+      - name: Regenerar .SRCINFO en contenedor Arch Linux
+        run: |
+          docker run --rm -v "$PWD":/pkg -w /pkg archlinux:base-devel bash -c "
+            pacman -Syu --noconfirm git pacman-contrib > /dev/null 2>&1
+            useradd -m builder
+            chown -R builder:builder /pkg
+            su builder -c 'makepkg --printsrcinfo > .SRCINFO'
+          "
+
+      - name: Publicar cambios en AUR
+        env:
+          SSH_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+
+          git clone ssh://aur@aur.archlinux.org/macoblox-git.git aur_clone
+          cp PKGBUILD .SRCINFO aur_clone/
+          cd aur_clone
+          git config user.name "MapleProjects"
+          git config user.email "eportillo898v2@gmail.com"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "Sin cambios pendientes para AUR."
+          else
+            git commit -m "Actualizacion automatica: ${{ steps.check_upstream.outputs.new_pkgver }}"
+            git push origin master
+            echo "Cambios enviados a AUR correctamente."
+          fi
+
+      - name: Actualizar repositorio GitHub
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          if git diff --cached --quiet; then
+            echo "Sin cambios locales en GitHub."
+          else
+            git commit -m "chore(aur): sincronizar pkgver ${{ steps.check_upstream.outputs.new_pkgver }}"
+            git push origin main
+          fi
