@@ -1,7 +1,7 @@
 pkgbase = macoblox-git
 	pkgdesc = Run the macOS Roblox client on Linux through Darling
 	pkgver = r100.fddaca2
-	pkgrel = 2
+	pkgrel = 1
 	url = https://github.com/aubree-lat/MacOBlox
 	arch = x86_64
 	license = MIT

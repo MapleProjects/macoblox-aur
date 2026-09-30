@@ -3,7 +3,7 @@
 pkgname=macoblox-git
 _name=MacOBlox
 pkgver=r100.fddaca2
-pkgrel=2
+pkgrel=1
 pkgdesc="Run the macOS Roblox client on Linux through Darling"
 arch=('x86_64')
 url="https://github.com/aubree-lat/MacOBlox"
@@ -19,12 +19,6 @@ sha256sums=('SKIP')
 pkgver() {
   cd "$_name"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
-
-prepare() {
-  cd "$_name"
-  # Fix /private/tmp and /var/tmp permissions in Darling prefix on launch
-  sed -i '/def prepare_prefix(env):/a\    for sub in ("private/tmp", "var/tmp"):\n        d = DARLING_PREFIX / sub\n        try:\n            d.mkdir(parents=True, exist_ok=True)\n            d.chmod(0o1777)\n        except OSError:\n            pass' launcher/macoblox/core.py
 }
 
 package() {
