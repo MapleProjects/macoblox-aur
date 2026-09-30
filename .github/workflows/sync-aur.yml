@@ -20,7 +20,7 @@ jobs:
       - name: Verificar cambios en upstream MacOBlox
         id: check_upstream
         run: |
-          git clone --depth=1 https://github.com/aubree-lat/MacOBlox.git upstream
+          git clone --filter=blob:none https://github.com/aubree-lat/MacOBlox.git upstream
           UPSTREAM_REV=$(git -C upstream rev-list --count HEAD)
           UPSTREAM_HASH=$(git -C upstream rev-parse --short HEAD)
           NEW_PKGVER="r${UPSTREAM_REV}.${UPSTREAM_HASH}"
@@ -41,6 +41,7 @@ jobs:
             chown -R builder:builder /pkg
             su builder -c 'makepkg --printsrcinfo > .SRCINFO'
           "
+          sudo chown -R $USER:$USER .
 
       - name: Publicar cambios en AUR
         env:
@@ -51,9 +52,10 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
 
-          git clone ssh://aur@aur.archlinux.org/macoblox-git.git aur_clone
-          cp PKGBUILD .SRCINFO aur_clone/
-          cd aur_clone
+          rm -rf /tmp/aur_clone
+          git clone ssh://aur@aur.archlinux.org/macoblox-git.git /tmp/aur_clone
+          cp PKGBUILD .SRCINFO /tmp/aur_clone/
+          cd /tmp/aur_clone
           git config user.name "MapleProjects"
           git config user.email "eportillo898v2@gmail.com"
           git add PKGBUILD .SRCINFO
