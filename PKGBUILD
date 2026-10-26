@@ -1,52 +1,45 @@
-# Maintainer: MapleProjects <eportillo898v2@gmail.com>
-# Contributor: aubree.wtf <https://aubree.wtf/>
-pkgname=macoblox-git
-_name=MacOBlox
-pkgver=r306.f4fb4b9
+# Maintainer: aubree.wtf <https://aubree.wtf/>
+pkgname=quadrahq-git
+_name=Quadra
+pkgver=0.37.3.r1.gf4fb4b9
 pkgrel=1
 pkgdesc="Run the macOS Roblox client on Linux through Darling"
 arch=('x86_64')
-url="https://github.com/aubree-lat/MacOBlox"
-license=('MIT')
-# clang and lld build the shim on first launch, against Darling's own sysroot.
-depends=('darling' 'clang' 'lld' 'unzip' 'pipewire-audio' 'python' 'python-gobject' 'gtk4' 'libadwaita' 'webkitgtk-6.0')
-makedepends=('git')
-provides=('macoblox')
-conflicts=('macoblox')
-source=("git+$url.git"
-        "shift_lock_reticle.patch")
-sha256sums=('SKIP'
-            'ab7472b393df8f5d99656d41c17a209e1dd0d737c31b0ba3f840902e5bf3cf30')
-
-prepare() {
-  cd "$_name"
-  patch -Np1 -i "$srcdir/shift_lock_reticle.patch"
-}
+url="https://quadrahq.org"
+_repo="https://github.com/QuadraHQ/Quadra"
+license=('GPL-3.0-only' 'MIT' 'ISC' 'OFL-1.1')
+depends=('unzip' 'python' 'python-gobject' 'python-cairo'
+         'gtk4>=4.14' 'libadwaita>=1.5' 'webkitgtk-6.0' 'sdl2' 'wayland'
+         'libpulse' 'libglvnd' 'vulkan-icd-loader' 'llvm-libs>=15' 'libx11' 'libxext' 'libxfixes' 'libxi' 'libxcursor' 'gcc-libs')
+depends+=('hicolor-icon-theme' 'shared-mime-info' 'desktop-file-utils')
+makedepends=('git' 'clang' 'lld' 'pkgconf' 'vulkan-headers' 'rust>=1.98')
+optdepends=('darling: regular Darling runtime'
+            'ciderdarling-bin: QuadraHQ Darling runtime (also available from the launcher)'
+            'mangohud: performance overlay'
+            'mesa: Mesa EGL and Zink for the Vulkan renderer'
+            'vulkan-driver: hardware Vulkan driver for the Vulkan renderer'
+            'pipewire-audio: native PipeWire audio playback')
+provides=('quadrahq' 'ciderhq' 'macoblox')
+conflicts=('quadrahq' 'ciderhq' 'ciderhq-git' 'macoblox' 'macoblox-git')
+replaces=('ciderhq-git' 'macoblox-git')
+source=("$_name::git+$_repo.git")
+sha256sums=('SKIP')
 
 pkgver() {
   cd "$_name"
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  # Normalize p1 and .p1 tags so patch builds sort after earlier git snapshots.
+  git describe --tags --long --match 'v[0-9]*' --abbrev=7 |
+    sed 's/^v//;s/^\([0-9][0-9.]*[0-9]\)\.\{0,1\}p\([0-9][0-9]*\)/\1.\2/;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "$_name"
+  QUADRA_BUILD_DIR="$srcdir/native-build" ./build_debug_shim.sh
+  QUADRA_BUILD_DIR="$srcdir/native-build" bash packaging/build-metal.sh
 }
 
 package() {
   cd "$_name"
-  local share="$pkgdir/usr/share/macoblox"
-  install -d "$share"
-  cp -r --no-preserve=ownership launcher branding frameworks build_debug_shim.sh ./*.c ./*.m "$share/"
-  rm -f "$share/launcher/install.sh"
-  python -m compileall -q -d /usr/share/macoblox/launcher "$share/launcher"
-
-  install -d "$pkgdir/usr/bin"
-  ln -s /usr/share/macoblox/launcher/macoblox-launcher "$pkgdir/usr/bin/macoblox"
-
-  for size in 16 22 24 32 48 64 128 256 512; do
-    install -Dm644 "branding/icons/macoblox-$size.png" \
-      "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/macoblox.png"
-  done
-  install -Dm644 packaging/wtf.aubree.MacOBlox.desktop -t "$pkgdir/usr/share/applications"
-  install -Dm644 packaging/wtf.aubree.MacOBlox.URI.desktop -t "$pkgdir/usr/share/applications"
-  install -Dm644 packaging/macoblox-roblox-window.desktop -t "$pkgdir/usr/share/applications"
-  install -Dm644 packaging/wtf.aubree.MacOBlox.Studio.desktop -t "$pkgdir/usr/share/applications"
-  install -Dm644 packaging/wtf.aubree.MacOBlox.xml -t "$pkgdir/usr/share/mime/packages"
-  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+  bash packaging/install-payload.sh "$PWD" "$srcdir/native-build" "$pkgdir" /usr/lib
+  python -m compileall -q -d /usr/share/quadrahq/launcher "$pkgdir/usr/share/quadrahq/launcher"
 }

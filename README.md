@@ -1,17 +1,11 @@
-# macoblox-aur
+# quadrahq-aur
 
-Paquete AUR para [MacOBlox](https://github.com/aubree-lat/MacOBlox) (`macoblox-git`).
+Repositorio de empaquetado para el paquete AUR [`quadrahq-git`](https://aur.archlinux.org/packages/quadrahq-git), el sucesor oficial de MacOBlox y CiderHQ para ejecutar el cliente macOS de Roblox en Linux a través de Darling.
 
-Permite ejecutar el cliente nativo de Roblox de macOS en Linux a través de Darling.
+## Proceso de sincronización
+Sincronizado automáticamente cada 6 horas con el repositorio oficial [QuadraHQ/Quadra](https://github.com/QuadraHQ/Quadra).
 
-## Instalación
-
-Con cualquier asistente de AUR como `paru`:
-
+## Proceso de instalación
 ```bash
-paru -S macoblox-git
+paru -S quadrahq-git
 ```
-
-## Sincronización automática
-
-Este repositorio cuenta con un flujo de GitHub Actions que revisa el repositorio upstream cada 6 horas, regenera `.SRCINFO` y actualiza el paquete en AUR automáticamente ante cualquier nuevo commit o ajuste de dependencias.
